@@ -5,43 +5,103 @@
  * reservoir.
  * 
  * 
- * 
+ * Steinhart-Hart coefficients were determined using the web-based tool Thermistor Calculator at https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
  */
 
 
-#include <LiquidCrystal.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  //RS pin=d12,Enable=d11,D4=d5,D5=d4,D6=3,D7=d2
-                                        //LCD R/W -> GND, VSS->GND, VCC->5V,LED+ ->5V through 220ohm resistor, LED- ->GND
+
+LiquidCrystal_I2C lcd(0x27,16,2);
 
 int sensorPin =A0;
+int LEDPin = 13;
+int buzzerPin = 12;
+int interruptPin = 2;
+//int interruptPin = 3;    //Uncomment this and comment out the previous line if using the BNC Trigger input for switching on stimulation
 int V0=0;
 float R1 = 10000; //For 10k (fixed)resistor change to appropiate value if using a different resistor
 float R2,logR2, T, Tcel;   //May the lord forgive me!
-float A = 0.3518829716e-03, B = 3.624399442e-04, C= -4.255586818e-07;  //for steinhar-hart coefficients need to be experimentally determined
+float A = 0.3518829716e-03, B = 3.624399442e-04, C= -4.255586818e-07;  //experimentally determined Steinhart-Hart coefficients
+
+volatile byte State = 0;
+volatile byte UpdateTimeFlag = false;
+
+byte LEDState = HIGH;                  ////default is high since we are using a PNP transistor
+
+unsigned long TimePeriod;
+
+//unsigned long interval;
+ 
 
 void setup() 
 {
-  Serial.begin(9600);
-  //lcd.begin(16,2);
-  //lcd.setCursor(0,0);
-  //lcd.print("Hello!");
-  delay(3000);
-  //lcd.clear();
+  Serial.begin(9600);       //Comment out once done
+  lcd.init();
+  delay(100);
+  WelcomeMessage();
 
+  pinMode(LEDPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(LEDPin, HIGH);              //default is high since we are using a PNP transistor
+  digitalWrite(buzzerPin, LOW);
+  pinMode(interruptPin, INPUT_PULLUP);
+
+  attachInterrupt(digitalPinToInterrupt(interruptPin), Trigger, LOW);
+
+  
+  
+  
 }
 
 void loop() 
 {
-  // put your main code here, to run repeatedly:  
-  measureTemperature();
-  delay(1000);
   
-// lcd.clear();
+  DisplayTemperature();
+
+  CalculateTimePeriod();
+
+  digitalWrite(buzzerPin, State);        //Toggles buzzer on/off
+
+  unsigned long StartTime = 0;
+
+  if(UpdateTimeFlag)                        //Updates StartTime only once per button press. Can't do this inside ISR
+  {
+    StartTime = millis();
+    UpdateTimeFlag = false;
+    
+  }
+
+  if(State)
+  {
+   if(millis() - StartTime > (TimePeriod/2))
+   {
+    LEDState = !LEDState;
+    digitalWrite(LEDPin, LEDState); 
+
+    StartTime = StartTime + TimePeriod/2;     //Update Time by half cycle(time elapsed)
+
+    }
+
+/*
+    if(millis() - StartTime > (TimePeriod/2))
+   {
+    LEDState = !LEDState;
+    digitalWrite(LEDPin, LEDState); 
+
+    StartTime = millis();     //Update Time by half cycle
+
+    }
+
+*/
+
+   }
+ 
 }
 
 
-void measureTemperature()
+void DisplayTemperature()
 { 
   V0 = analogRead(sensorPin);
   R2 = R1 * (1023.0 / (float)V0 - 1.0);
@@ -60,6 +120,27 @@ void measureTemperature()
   Serial.println(R2);
   Serial.print("Temperature =");
   Serial.print(Tcel);
-
+  
+  
 }
 
+
+
+void WelcomeMessage()
+{
+ lcd.clear(); 
+ //Print Welcome Message
+}
+
+
+void CalculateTimePeriod()
+{
+  
+}
+
+
+void Trigger()
+{
+  State=!State;
+  UpdateTimeFlag = true;
+}
