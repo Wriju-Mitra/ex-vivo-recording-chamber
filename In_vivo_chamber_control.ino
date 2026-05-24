@@ -124,11 +124,19 @@ void DisplayTemperature()
   
 }
 
-
-
 void WelcomeMessage()
 {
+
+String message = "Frequency and intensity control for Ex-vivo Stimulation";
+for(int i = o; i < message.length(); i++) {
+ lcd.clear();
+ lcd.setCursor(0,0);
+ lcd.print(message.substring(i,i+16))
+ delay(100);
+ 
+}
  lcd.clear(); 
+
  //Print Welcome Message
 }
 
