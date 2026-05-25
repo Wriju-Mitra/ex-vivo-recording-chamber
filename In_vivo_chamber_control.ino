@@ -16,6 +16,7 @@
 LiquidCrystal_I2C lcd(0x27,16,2);
 
 int sensorPin =A0;
+int PotentiometerPin =A1;
 int LEDPin = 13;
 int buzzerPin = 12;
 int interruptPin = 2;
@@ -31,6 +32,7 @@ volatile byte UpdateTimeFlag = false;
 byte LEDState = HIGH;                  ////default is high since we are using a PNP transistor
 
 unsigned long TimePeriod;
+int freq=0;
 
 //unsigned long interval;
  
@@ -40,6 +42,7 @@ void setup()
   Serial.begin(9600);       //Comment out once done
   lcd.init();
   delay(100);
+  lcd.backlight();
   WelcomeMessage();
 
   pinMode(LEDPin, OUTPUT);
@@ -58,9 +61,9 @@ void setup()
 void loop() 
 {
   
-  DisplayTemperature();
+  DisplayTemperature();                    //Display temp and frequency while running
 
-  CalculateTimePeriod();
+  TimePeriod = CalculateTimePeriod();     //function returns time period
 
   digitalWrite(buzzerPin, State);        //Toggles buzzer on/off
 
@@ -98,6 +101,7 @@ void loop()
 
    }
  
+  lcd.clear();
 }
 
 
@@ -108,18 +112,25 @@ void DisplayTemperature()
   logR2 =log(R2);
   T = (1.0/(A + B*logR2 + C*pow(logR2,3)));   //Steinhart-Hart equation
   Tcel = T - 273.15;
- /* lcd.setCursor(0,0);
+  lcd.setCursor(0,0);
   lcd.print("Temperature = ");
   lcd.print(T);
   lcd.print("K");
   lcd.print(" (");
   lcd.print(Tcel);
   lcd.print("C)");
-  */
+
+  lcd.setCursor(0,1);
+  lcd.print("Frequency = ");
+  lcd.print(freq);
+  
+  
   Serial.print("Resistance");
   Serial.println(R2);
   Serial.print("Temperature =");
   Serial.print(Tcel);
+
+  //Also display Freq in another line
   
   
 }
@@ -130,12 +141,14 @@ void WelcomeMessage()
 String message = "Frequency and intensity control for Ex-vivo Stimulation";
 lcd.setCursor(0,0);
  lcd.print("HELLO");
+ delay(500);
+ 
 //scrolling within the second row
- for(int i = o; i < message.length(); i++) {
+ for(int i = 0; i < message.length(); i++) {
  lcd.clear();
- lcd.setCursor(0,0);
- lcd.print(message.substring(i,i+16))
- delay(100);
+ lcd.setCursor(0,1);
+ lcd.print(message.substring(i,i+16));
+ delay(300);
  
 }
  lcd.clear(); 
@@ -144,9 +157,11 @@ lcd.setCursor(0,0);
 }
 
 
-void CalculateTimePeriod()
+unsigned long CalculateTimePeriod()
 {
-  
+  freq = map(analogRead(PotentiometerPin), 0, 1023, 50, 0);
+  unsigned long t=(1000/freq);
+  return t;
 }
 
 
