@@ -140,18 +140,23 @@ void WelcomeMessage()
 
 String message = "Frequency and intensity control for Ex-vivo Stimulation";
 lcd.setCursor(0,0);
- lcd.print("HELLO");
+lcd.print("HELLO"); // first row statis
  delay(500);
  
-//scrolling within the second row
+//scrolling within the second row only
  for(int i = 0; i < message.length(); i++) {
  lcd.clear();
  lcd.setCursor(0,1);
  lcd.print(message.substring(i,i+16));
  delay(300);
- 
 }
- lcd.clear(); 
+
+lcd.clear(); 
+lcd.setCursor(0,1);
+lcd.print("Left:intensity")
+
+lcd.setCursor(0,1);
+lcd.print("Left:intensity")
 
  //Print Welcome Message
 }
