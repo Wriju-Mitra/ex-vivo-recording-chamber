@@ -19,15 +19,15 @@ int sensorPin =A0;
 int PotentiometerPin =A1;
 int LEDPin = 13;
 int buzzerPin = 12;
-int interruptPin = 2;
-//int interruptPin = 3;    //Uncomment this and comment out the previous line if using the BNC Trigger input for switching on stimulation
+int ButtonPin = 3;
+//int interruptPin = 2;    //Uncomment this and comment out the previous line if using the BNC Trigger input for switching on stimulation
 int V0=0;
 float R1 = 10000; //For 10k (fixed)resistor change to appropiate value if using a different resistor
 float R2,logR2, T, Tcel;   //May the lord forgive me!
 float A = 0.3518829716e-03, B = 3.624399442e-04, C= -4.255586818e-07;  //experimentally determined Steinhart-Hart coefficients
 
 volatile byte State = 0;
-volatile byte UpdateTimeFlag = false;
+//volatile byte UpdateTimeFlag = false;
 
 byte LEDState = HIGH;                  ////default is high since we are using a PNP transistor
 
@@ -39,7 +39,7 @@ int freq=0;
 
 void setup() 
 {
-  Serial.begin(9600);       //Comment out once done
+ // Serial.begin(9600);       //Comment out once done
   lcd.init();
   delay(100);
   lcd.backlight();
@@ -49,9 +49,9 @@ void setup()
   pinMode(buzzerPin, OUTPUT);
   digitalWrite(LEDPin, HIGH);              //default is high since we are using a PNP transistor
   digitalWrite(buzzerPin, LOW);
-  pinMode(interruptPin, INPUT_PULLUP);
+  pinMode(ButtonPin, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(interruptPin), Trigger, LOW);
+  attachInterrupt(digitalPinToInterrupt(ButtonPin), Trigger, LOW);
 
   
   
@@ -65,41 +65,34 @@ void loop()
 
   TimePeriod = CalculateTimePeriod();     //function returns time period
 
-  digitalWrite(buzzerPin, State);        //Toggles buzzer on/off
+  delay(100);    
 
-  unsigned long StartTime = 0;
-
-  if(UpdateTimeFlag)                        //Updates StartTime only once per button press. Can't do this inside ISR
-  {
-    StartTime = millis();
-    UpdateTimeFlag = false;
-    
-  }
+  //unsigned long StartTime = 0;
 
   if(State)
   {
-   if(millis() - StartTime > (TimePeriod/2))
-   {
-    LEDState = !LEDState;
-    digitalWrite(LEDPin, LEDState); 
+    
+    byte reading = digitalRead(ButtonPin);
+    delay(10);
+    if(digitalRead(ButtonPin)==reading)
+    {
+    
 
-    StartTime = StartTime + TimePeriod/2;     //Update Time by half cycle(time elapsed)
+         while(State)
+        {
+          digitalWrite(buzzerPin, HIGH);
 
-    }
-
-/*
-    if(millis() - StartTime > (TimePeriod/2))
-   {
-    LEDState = !LEDState;
-    digitalWrite(LEDPin, LEDState); 
-
-    StartTime = millis();     //Update Time by half cycle
-
-    }
-
-*/
-
-   }
+          digitalWrite(LEDPin, LOW);
+          delay(TimePeriod/2);
+          digitalWrite(LEDPin, HIGH); 
+          delay(TimePeriod/2);
+    
+        }
+  }
+  }
+  
+ digitalWrite(buzzerPin, LOW);
+ 
  
   lcd.clear();
 }
@@ -125,13 +118,13 @@ void DisplayTemperature()
   lcd.print(freq);
   
   
-  Serial.print("Resistance");
+  /*Serial.print("Resistance");
   Serial.println(R2);
   Serial.print("Temperature =");
   Serial.print(Tcel);
 
   //Also display Freq in another line
-  
+  */
   
 }
 
@@ -144,7 +137,8 @@ lcd.print("HELLO"); // first row statis
  delay(500);
  
 //scrolling within the second row only
- for(int i = 0; i < message.length(); i++) {
+ for(int i = 0; i < message.length(); i++) 
+ {
  lcd.clear();
  lcd.setCursor(0,1);
  lcd.print(message.substring(i,i+16));
@@ -153,10 +147,10 @@ lcd.print("HELLO"); // first row statis
 
 lcd.clear(); 
 lcd.setCursor(0,1);
-lcd.print("Left:intensity")
+lcd.print("Left:intensity");
 
 lcd.setCursor(0,1);
-lcd.print("Left:intensity")
+lcd.print("Left:intensity");
 
  //Print Welcome Message
 }
@@ -173,5 +167,5 @@ unsigned long CalculateTimePeriod()
 void Trigger()
 {
   State=!State;
-  UpdateTimeFlag = true;
+ // UpdateTimeFlag = true;
 }
