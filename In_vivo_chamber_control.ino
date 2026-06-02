@@ -6,6 +6,36 @@
  * 
  * 
  * Steinhart-Hart coefficients were determined using the web-based tool Thermistor Calculator at https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
+ * 
+ * 
+ * 
+ * MIT License
+
+Copyright (c) 2026 Wriju Mitra and Kamakshi Singh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+ * 02.06.25
+ * Chouhan Lab
+ * TIFR Mumbai
+ * 
  */
 
 
@@ -26,24 +56,20 @@ float R1 = 10000; //For 10k (fixed)resistor change to appropiate value if using 
 float R2,logR2, T, Tcel;   //May the lord forgive me!
 float A = 0.3518829716e-03, B = 3.624399442e-04, C= -4.255586818e-07;  //experimentally determined Steinhart-Hart coefficients
 
-volatile byte State = 0;
+volatile bool State = 0;
 //volatile byte UpdateTimeFlag = false;
 
-byte LEDState = HIGH;                  ////default is high since we are using a PNP transistor
+bool LEDState = HIGH;                  ////default is high since we are using a PNP transistor
 
 unsigned long TimePeriod;
 int freq=0;
 
-//unsigned long interval;
+static unsigned long lastInterruptTime = 0;
  
 
 void setup() 
 {
  // Serial.begin(9600);       //Comment out once done
-  lcd.init();
-  delay(100);
-  lcd.backlight();
-  WelcomeMessage();
 
   pinMode(LEDPin, OUTPUT);
   pinMode(buzzerPin, OUTPUT);
@@ -53,6 +79,13 @@ void setup()
 
   attachInterrupt(digitalPinToInterrupt(ButtonPin), Trigger, LOW);
 
+  
+  lcd.init();
+  delay(100);
+  lcd.backlight();
+  WelcomeMessage();
+
+ 
   
   
   
@@ -66,17 +99,7 @@ void loop()
   TimePeriod = CalculateTimePeriod();     //function returns time period
 
   delay(100);    
-
-  //unsigned long StartTime = 0;
-
-  if(State)
-  {
-    
-    byte reading = digitalRead(ButtonPin);
-    delay(10);
-    if(digitalRead(ButtonPin)==reading)
-    {
-    
+ 
 
          while(State)
         {
@@ -88,10 +111,8 @@ void loop()
           delay(TimePeriod/2);
     
         }
-  }
-  }
   
- digitalWrite(buzzerPin, LOW);
+         digitalWrite(buzzerPin, LOW);
  
  
   lcd.clear();
@@ -106,16 +127,17 @@ void DisplayTemperature()
   T = (1.0/(A + B*logR2 + C*pow(logR2,3)));   //Steinhart-Hart equation
   Tcel = T - 273.15;
   lcd.setCursor(0,0);
-  lcd.print("Temperature = ");
-  lcd.print(T);
-  lcd.print("K");
-  lcd.print(" (");
+  lcd.print("Temp= ");
+  //lcd.print(T);
+  //lcd.print("K");
+  //lcd.print(" (");
   lcd.print(Tcel);
-  lcd.print("C)");
+  lcd.print("C");
 
   lcd.setCursor(0,1);
   lcd.print("Frequency = ");
   lcd.print(freq);
+  lcd.print("Hz");
   
   
   /*Serial.print("Resistance");
@@ -131,26 +153,39 @@ void DisplayTemperature()
 void WelcomeMessage()
 {
 
-String message = "Frequency and intensity control for Ex-vivo Stimulation";
+String message1 = "Frequency and intensity control for Ex-vivo Stimulation                ";
+String message2 = "https://github.com/Wriju-Mitra/ex-vivo-recording-chamber                ";
+String message3 = "MIT License Copyright (c) 2026 Wriju & Kamakshi                ";
+
 lcd.setCursor(0,0);
 lcd.print("HELLO"); // first row statis
  delay(500);
  
 //scrolling within the second row only
- for(int i = 0; i < message.length(); i++) 
+ for(int i = 0; i < message1.length(); i++) 
  {
- lcd.clear();
+
  lcd.setCursor(0,1);
- lcd.print(message.substring(i,i+16));
+ lcd.print(message1.substring(i,i+16));
  delay(300);
 }
+ lcd.clear();
 
-lcd.clear(); 
-lcd.setCursor(0,1);
-lcd.print("Left:intensity");
 
-lcd.setCursor(0,1);
-lcd.print("Left:intensity");
+
+for(int i = 0; i < message2.length(); i++) 
+ {
+ //lcd.clear();
+ lcd.setCursor(0,0);
+ lcd.print(message2.substring(i,i+16));
+ 
+ lcd.setCursor(0,1);
+ lcd.print(message3.substring(i,i+16));
+ delay(300);
+}
+ lcd.clear();
+
+
 
  //Print Welcome Message
 }
@@ -166,6 +201,15 @@ unsigned long CalculateTimePeriod()
 
 void Trigger()
 {
+
+  if(millis() - lastInterruptTime < 50)
+    return;            //do nothing as this is probably a bounce
+
+
+  else
+  {
   State=!State;
- // UpdateTimeFlag = true;
+  lastInterruptTime = millis();
+  }
+
 }
